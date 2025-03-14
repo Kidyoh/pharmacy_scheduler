@@ -680,18 +680,9 @@ export function PharmacyRotation() {
           // Create pharmacy bubble
           const bubble = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           
-          // Create outer glow filter
-          const filterId = `glow-${group.id}-${index}`;
-          const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
-          filter.setAttribute('id', filterId);
-          filter.innerHTML = `
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          `;
-          svg.appendChild(filter);
+          // Get current assignment status
+          const currentAssignment = currentAssignments.find(a => a.groupId === group.id);
+          const isCurrentPharmacy = currentAssignment?.pharmacyName === pharmacy.name;
           
           // Create circle
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -699,20 +690,9 @@ export function PharmacyRotation() {
           circle.setAttribute('cy', y.toString());
           circle.setAttribute('r', '75');
           
-          const currentAssignment = currentAssignments.find(a => a.groupId === group.id);
-          const isCurrentPharmacy = currentAssignment?.pharmacyName === pharmacy.name;
-          const nextPharmacy = getNextPharmacy(group.id);
-          const isNextPharmacy = nextPharmacy.name === pharmacy.name;
-          
           // Update circle styling based on status
           if (isCurrentPharmacy) {
             circle.setAttribute('fill', group.color);
-            circle.setAttribute('filter', `url(#${filterId})`);
-          } else if (isNextPharmacy) {
-            circle.setAttribute('fill', 'rgba(34, 197, 94, 0.2)');
-            circle.setAttribute('stroke', '#22c55e');
-            circle.setAttribute('stroke-width', '4');
-            circle.setAttribute('filter', `url(#${filterId})`);
           } else {
             circle.setAttribute('fill', 'rgba(255, 255, 255, 0.05)');
             circle.setAttribute('stroke', 'rgba(255, 255, 255, 0.2)');
@@ -745,18 +725,8 @@ export function PharmacyRotation() {
           statusText.setAttribute('y', (y + 25).toString());
           statusText.setAttribute('text-anchor', 'middle');
           statusText.setAttribute('font-size', '16');
-          
-          if (isCurrentPharmacy) {
-            statusText.setAttribute('fill', 'white');
-            statusText.textContent = `Current (Day ${currentAssignment.dayNumber}/${pharmacy.days})`;
-          } else if (isNextPharmacy) {
-            statusText.setAttribute('fill', '#22c55e');
-            statusText.setAttribute('font-weight', 'bold');
-            statusText.textContent = 'Next Up →';
-          } else {
-            statusText.setAttribute('fill', 'rgba(255, 255, 255, 0.5)');
-            statusText.textContent = 'Pending';
-          }
+          statusText.setAttribute('fill', isCurrentPharmacy ? 'white' : 'rgba(255, 255, 255, 0.5)');
+          statusText.textContent = isCurrentPharmacy ? 'Current' : 'Pending';
 
           // If not the last pharmacy, create arrow to next pharmacy
           if (index < PHARMACIES.length - 1) {
@@ -764,7 +734,7 @@ export function PharmacyRotation() {
             const nextX = centerX + radius * Math.cos(nextAngle);
             const nextY = centerY + radius * Math.sin(nextAngle);
 
-            // Create curved arrow
+            // Create curved arrow with arrow marker
             const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             const midAngle = (angle + nextAngle) / 2;
             const controlX = centerX + radius * 1.2 * Math.cos(midAngle);
@@ -773,9 +743,9 @@ export function PharmacyRotation() {
             const path = `M ${x} ${y} Q ${controlX} ${controlY} ${nextX} ${nextY}`;
             arrow.setAttribute('d', path);
             arrow.setAttribute('fill', 'none');
-            arrow.setAttribute('stroke', isCurrentPharmacy ? group.color : 'rgba(255, 255, 255, 0.2)');
-            arrow.setAttribute('stroke-width', isCurrentPharmacy ? '3' : '2');
-            arrow.setAttribute('marker-end', `url(#arrowhead-${group.id})`);
+            arrow.setAttribute('stroke', isCurrentPharmacy ? group.color : 'rgba(255, 255, 255, 0.3)');
+            arrow.setAttribute('stroke-width', '3');
+            arrow.setAttribute('marker-end', `url(#arrowhead-${isCurrentPharmacy ? 'current' : 'default'}-${group.id})`);
             svg.appendChild(arrow);
           } else {
             // Create arrow from last to first pharmacy
@@ -791,9 +761,9 @@ export function PharmacyRotation() {
             const path = `M ${x} ${y} Q ${controlX} ${controlY} ${firstX} ${firstY}`;
             arrow.setAttribute('d', path);
             arrow.setAttribute('fill', 'none');
-            arrow.setAttribute('stroke', isCurrentPharmacy ? group.color : 'rgba(255, 255, 255, 0.2)');
-            arrow.setAttribute('stroke-width', isCurrentPharmacy ? '3' : '2');
-            arrow.setAttribute('marker-end', `url(#arrowhead-${group.id})`);
+            arrow.setAttribute('stroke', isCurrentPharmacy ? group.color : 'rgba(255, 255, 255, 0.3)');
+            arrow.setAttribute('stroke-width', '3');
+            arrow.setAttribute('marker-end', `url(#arrowhead-${isCurrentPharmacy ? 'current' : 'default'}-${group.id})`);
             svg.appendChild(arrow);
           }
 
@@ -804,22 +774,41 @@ export function PharmacyRotation() {
           svg.appendChild(bubble);
         });
 
-        // Add arrow marker definition for this group
+        // Add arrow marker definitions for this group
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-        marker.setAttribute('id', `arrowhead-${group.id}`);
-        marker.setAttribute('markerWidth', '12');
-        marker.setAttribute('markerHeight', '8');
-        marker.setAttribute('refX', '10');
-        marker.setAttribute('refY', '4');
-        marker.setAttribute('orient', 'auto');
         
-        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        polygon.setAttribute('points', '0 0, 12 4, 0 8');
-        polygon.setAttribute('fill', group.color);
+        // Default arrow marker
+        const defaultMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        defaultMarker.setAttribute('id', `arrowhead-default-${group.id}`);
+        defaultMarker.setAttribute('markerWidth', '12');
+        defaultMarker.setAttribute('markerHeight', '8');
+        defaultMarker.setAttribute('refX', '10');
+        defaultMarker.setAttribute('refY', '4');
+        defaultMarker.setAttribute('orient', 'auto');
         
-        marker.appendChild(polygon);
-        defs.appendChild(marker);
+        const defaultPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        defaultPolygon.setAttribute('points', '0 0, 12 4, 0 8');
+        defaultPolygon.setAttribute('fill', 'rgba(255, 255, 255, 0.3)');
+        
+        defaultMarker.appendChild(defaultPolygon);
+        defs.appendChild(defaultMarker);
+
+        // Current arrow marker
+        const currentMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        currentMarker.setAttribute('id', `arrowhead-current-${group.id}`);
+        currentMarker.setAttribute('markerWidth', '12');
+        currentMarker.setAttribute('markerHeight', '8');
+        currentMarker.setAttribute('refX', '10');
+        currentMarker.setAttribute('refY', '4');
+        currentMarker.setAttribute('orient', 'auto');
+        
+        const currentPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        currentPolygon.setAttribute('points', '0 0, 12 4, 0 8');
+        currentPolygon.setAttribute('fill', group.color);
+        
+        currentMarker.appendChild(currentPolygon);
+        defs.appendChild(currentMarker);
+
         svg.appendChild(defs);
 
         // Add legend
@@ -832,12 +821,8 @@ export function PharmacyRotation() {
               <span class="text-white text-sm">Current Location</span>
             </div>
             <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-green-500"></div>
-              <span class="text-white text-sm">Next Destination</span>
-            </div>
-            <div class="flex items-center gap-2">
               <div class="w-3 h-3 rounded-full bg-gray-500"></div>
-              <span class="text-white text-sm">Pending</span>
+              <span class="text-white text-sm">Other Locations</span>
             </div>
           </div>
         `;
@@ -1079,15 +1064,25 @@ export function PharmacyRotation() {
           // Create pharmacy bubble
           const bubble = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           
+          // Get current assignment status
+          const currentAssignment = currentAssignments.find(a => a.groupId === group.id);
+          const isCurrentPharmacy = currentAssignment?.pharmacyName === pharmacy.name;
+          
           // Create circle
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', x.toString());
           circle.setAttribute('cy', y.toString());
           circle.setAttribute('r', '45');
-          circle.setAttribute('fill', 'white');
-          circle.setAttribute('stroke', group.color);
-          circle.setAttribute('stroke-width', '2');
           
+          // Update circle styling based on status
+          if (isCurrentPharmacy) {
+            circle.setAttribute('fill', group.color);
+          } else {
+            circle.setAttribute('fill', 'white');
+            circle.setAttribute('stroke', 'rgba(255, 255, 255, 0.2)');
+            circle.setAttribute('stroke-width', '2');
+          }
+
           // Create pharmacy name text
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           text.setAttribute('x', x.toString());
@@ -1115,17 +1110,11 @@ export function PharmacyRotation() {
           dateText.setAttribute('font-size', '11');
           dateText.setAttribute('fill', '#444');
           
-          const currentAssignment = currentAssignments.find(a => a.groupId === group.id);
           const isCompleted = currentAssignment?.pharmacyName === pharmacy.name;
           const availablePharmacies = PHARMACIES.filter(p => !currentAssignment?.pharmacyName.includes(p.name));
           const isCurrentlyAssigned = currentAssignment?.pharmacyName === pharmacy.name;
           const isAvailable = availablePharmacies.some(p => p.name === pharmacy.name);
           const isNext = isAvailable && currentAssignment?.dayNumber === index + 1;
-
-          // Update circle styling based on progress and availability
-          circle.setAttribute('fill', isCompleted ? group.color : 'white');
-          circle.setAttribute('stroke', isNext ? '#22c55e' : isCurrentlyAssigned ? group.color : '#666');
-          circle.setAttribute('stroke-width', isNext ? '4' : '3');
 
           // Update status text
           if (isCompleted) {
@@ -1179,7 +1168,7 @@ export function PharmacyRotation() {
             arrow.setAttribute('fill', 'none');
             arrow.setAttribute('stroke', group.color);
             arrow.setAttribute('stroke-width', '2');
-            arrow.setAttribute('marker-end', `url(#arrowhead-${group.id})`);
+            arrow.setAttribute('marker-end', `url(#arrowhead-${isCurrentPharmacy ? 'current' : 'default'}-${group.id})`);
             svg.appendChild(arrow);
           } else {
             // Create arrow from last to first pharmacy
@@ -1197,7 +1186,7 @@ export function PharmacyRotation() {
             arrow.setAttribute('fill', 'none');
             arrow.setAttribute('stroke', group.color);
             arrow.setAttribute('stroke-width', '2');
-            arrow.setAttribute('marker-end', `url(#arrowhead-${group.id})`);
+            arrow.setAttribute('marker-end', `url(#arrowhead-${isCurrentPharmacy ? 'current' : 'default'}-${group.id})`);
             svg.appendChild(arrow);
           }
 
@@ -1209,22 +1198,41 @@ export function PharmacyRotation() {
           svg.appendChild(bubble);
         });
 
-        // Add arrow marker definition for this group
+        // Add arrow marker definitions for this group
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-        marker.setAttribute('id', `arrowhead-${group.id}`);
-        marker.setAttribute('markerWidth', '10');
-        marker.setAttribute('markerHeight', '7');
-        marker.setAttribute('refX', '9');
-        marker.setAttribute('refY', '3.5');
-        marker.setAttribute('orient', 'auto');
         
-        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
-        polygon.setAttribute('fill', group.color);
+        // Default arrow marker
+        const defaultMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        defaultMarker.setAttribute('id', `arrowhead-default-${group.id}`);
+        defaultMarker.setAttribute('markerWidth', '12');
+        defaultMarker.setAttribute('markerHeight', '8');
+        defaultMarker.setAttribute('refX', '10');
+        defaultMarker.setAttribute('refY', '4');
+        defaultMarker.setAttribute('orient', 'auto');
         
-        marker.appendChild(polygon);
-        defs.appendChild(marker);
+        const defaultPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        defaultPolygon.setAttribute('points', '0 0, 12 4, 0 8');
+        defaultPolygon.setAttribute('fill', 'rgba(255, 255, 255, 0.3)');
+        
+        defaultMarker.appendChild(defaultPolygon);
+        defs.appendChild(defaultMarker);
+
+        // Current arrow marker
+        const currentMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        currentMarker.setAttribute('id', `arrowhead-current-${group.id}`);
+        currentMarker.setAttribute('markerWidth', '12');
+        currentMarker.setAttribute('markerHeight', '8');
+        currentMarker.setAttribute('refX', '10');
+        currentMarker.setAttribute('refY', '4');
+        currentMarker.setAttribute('orient', 'auto');
+        
+        const currentPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        currentPolygon.setAttribute('points', '0 0, 12 4, 0 8');
+        currentPolygon.setAttribute('fill', group.color);
+        
+        currentMarker.appendChild(currentPolygon);
+        defs.appendChild(currentMarker);
+
         svg.appendChild(defs);
 
         tempDiv.appendChild(svg);
