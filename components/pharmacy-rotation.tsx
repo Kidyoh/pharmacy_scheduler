@@ -45,8 +45,8 @@ import { toast } from 'sonner';
 const PHARMACIES = [
   { name: 'ART', days: 2, description: 'Antiretroviral Therapy' },
   { name: 'MCH', days: 1, description: 'Maternal and Child Health' },
-  { name: 'Chronic', days: 2, description: 'Chronic Disease Management' },
   { name: 'Emergency', days: 1, description: 'Emergency Services' },
+  { name: 'Chronic', days: 2, description: 'Chronic Disease Management' },
   { name: 'OPD', days: 2, description: 'Outpatient Department' },
   { name: 'Inpatient', days: 1, description: 'Inpatient Services' },
   { name: 'Compounding', days: 1, description: 'Medication Compounding' },
@@ -713,7 +713,7 @@ export function PharmacyRotation() {
           // Create days text
           const daysText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           daysText.setAttribute('x', x.toString());
-          daysText.setAttribute('y', y.toString());
+          daysText.setAttribute('y', (y - 2).toString()); // Move up slightly to avoid arrow
           daysText.setAttribute('text-anchor', 'middle');
           daysText.setAttribute('font-size', '16');
           daysText.setAttribute('fill', isCurrentPharmacy ? 'white' : 'rgba(255, 255, 255, 0.7)');
@@ -740,7 +740,16 @@ export function PharmacyRotation() {
             const controlX = centerX + radius * 1.2 * Math.cos(midAngle);
             const controlY = centerY + radius * 1.2 * Math.sin(midAngle);
             
-            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${nextX} ${nextY}`;
+            const dx = nextX - x;
+            const dy = nextY - y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const ndx = dx / length;
+            const ndy = dy / length;
+            const bubbleRadius = 75; // Adjust based on your actual bubble size
+            const shortenedEndX = nextX - ndx * bubbleRadius;
+            const shortenedEndY = nextY - ndy * bubbleRadius;
+            
+            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${shortenedEndX} ${shortenedEndY}`;
             arrow.setAttribute('d', path);
             arrow.setAttribute('fill', 'none');
             arrow.setAttribute('stroke', isCurrentPharmacy ? group.color : 'rgba(255, 255, 255, 0.3)');
@@ -758,7 +767,16 @@ export function PharmacyRotation() {
             const controlX = centerX + radius * 1.2 * Math.cos(midAngle);
             const controlY = centerY + radius * 1.2 * Math.sin(midAngle);
             
-            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${firstX} ${firstY}`;
+            const dx = firstX - x;
+            const dy = firstY - y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const ndx = dx / length;
+            const ndy = dy / length;
+            const bubbleRadius = 75; // Adjust based on your actual bubble size
+            const shortenedEndX = firstX - ndx * bubbleRadius;
+            const shortenedEndY = firstY - ndy * bubbleRadius;
+            
+            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${shortenedEndX} ${shortenedEndY}`;
             arrow.setAttribute('d', path);
             arrow.setAttribute('fill', 'none');
             arrow.setAttribute('stroke', isCurrentPharmacy ? group.color : 'rgba(255, 255, 255, 0.3)');
@@ -796,15 +814,17 @@ export function PharmacyRotation() {
         // Current arrow marker
         const currentMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
         currentMarker.setAttribute('id', `arrowhead-current-${group.id}`);
-        currentMarker.setAttribute('markerWidth', '12');
-        currentMarker.setAttribute('markerHeight', '8');
-        currentMarker.setAttribute('refX', '10');
-        currentMarker.setAttribute('refY', '4');
+        currentMarker.setAttribute('markerWidth', '10'); // Reduced from 12
+        currentMarker.setAttribute('markerHeight', '6'); // Reduced from 8
+        currentMarker.setAttribute('refX', '8'); // Adjusted from 10
+        currentMarker.setAttribute('refY', '3'); // Adjusted from 4
         currentMarker.setAttribute('orient', 'auto');
         
         const currentPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
         currentPolygon.setAttribute('points', '0 0, 12 4, 0 8');
         currentPolygon.setAttribute('fill', group.color);
+        // Add opacity
+        currentPolygon.setAttribute('opacity', '0.7');
         
         currentMarker.appendChild(currentPolygon);
         defs.appendChild(currentMarker);
@@ -1163,7 +1183,16 @@ export function PharmacyRotation() {
             const controlX = centerX + radius * 1.2 * Math.cos(midAngle);
             const controlY = centerY + radius * 1.2 * Math.sin(midAngle);
             
-            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${nextX} ${nextY}`;
+            const dx = nextX - x;
+            const dy = nextY - y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const ndx = dx / length;
+            const ndy = dy / length;
+            const bubbleRadius = 45; // Adjust based on your actual bubble size
+            const shortenedEndX = nextX - ndx * bubbleRadius;
+            const shortenedEndY = nextY - ndy * bubbleRadius;
+            
+            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${shortenedEndX} ${shortenedEndY}`;
             arrow.setAttribute('d', path);
             arrow.setAttribute('fill', 'none');
             arrow.setAttribute('stroke', group.color);
@@ -1181,7 +1210,16 @@ export function PharmacyRotation() {
             const controlX = centerX + radius * 1.2 * Math.cos(midAngle);
             const controlY = centerY + radius * 1.2 * Math.sin(midAngle);
             
-            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${firstX} ${firstY}`;
+            const dx = firstX - x;
+            const dy = firstY - y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const ndx = dx / length;
+            const ndy = dy / length;
+            const bubbleRadius = 45; // Adjust based on your actual bubble size
+            const shortenedEndX = firstX - ndx * bubbleRadius;
+            const shortenedEndY = firstY - ndy * bubbleRadius;
+            
+            const path = `M ${x} ${y} Q ${controlX} ${controlY} ${shortenedEndX} ${shortenedEndY}`;
             arrow.setAttribute('d', path);
             arrow.setAttribute('fill', 'none');
             arrow.setAttribute('stroke', group.color);
@@ -1220,15 +1258,17 @@ export function PharmacyRotation() {
         // Current arrow marker
         const currentMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
         currentMarker.setAttribute('id', `arrowhead-current-${group.id}`);
-        currentMarker.setAttribute('markerWidth', '12');
-        currentMarker.setAttribute('markerHeight', '8');
-        currentMarker.setAttribute('refX', '10');
-        currentMarker.setAttribute('refY', '4');
+        currentMarker.setAttribute('markerWidth', '10'); // Reduced from 12
+        currentMarker.setAttribute('markerHeight', '6'); // Reduced from 8
+        currentMarker.setAttribute('refX', '8'); // Adjusted from 10
+        currentMarker.setAttribute('refY', '3'); // Adjusted from 4
         currentMarker.setAttribute('orient', 'auto');
         
         const currentPolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
         currentPolygon.setAttribute('points', '0 0, 12 4, 0 8');
         currentPolygon.setAttribute('fill', group.color);
+        // Add opacity
+        currentPolygon.setAttribute('opacity', '0.7');
         
         currentMarker.appendChild(currentPolygon);
         defs.appendChild(currentMarker);
